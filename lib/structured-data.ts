@@ -1,13 +1,36 @@
-import { business } from '../content/business.ts';
+import { business, type Business } from '../content/business.ts';
+import { programs as allPrograms, type Program } from '../content/programs.ts';
 import { absoluteUrl } from './paths.ts';
+import { site } from './site.ts';
 
-/** Replace Organization with the appropriate business schema when designing a template. */
-export function businessStructuredData() {
+/** schema.org SportsActivityLocation for the dojo, derived entirely from content/. */
+export function businessStructuredData(b: Business = business, programs: readonly Program[] = allPrograms) {
   const url = absoluteUrl('/');
+  const prices = programs.map(p => p.monthlyPrice);
+  const open = b.hours.filter(h => h.opens && h.closes);
   return {
-    '@context': 'https://schema.org', '@type': 'Organization',
-    name: business.name, description: business.introduction, email: business.email,
-    ...(business.phone ? { telephone: business.phone } : {}), ...(url ? { url } : {}),
+    '@context': 'https://schema.org',
+    '@type': 'SportsActivityLocation',
+    name: b.name,
+    description: b.introduction,
+    email: b.email,
+    ...(b.phone ? { telephone: b.phone } : {}),
+    ...(url ? { url, image: `${site.url}/og.png` } : {}),
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: b.address.street,
+      addressLocality: b.address.locality,
+      addressRegion: b.address.region,
+      postalCode: b.address.postalCode,
+      addressCountry: b.address.country,
+    },
+    openingHoursSpecification: open.map(h => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `https://schema.org/${h.day}`,
+      opens: h.opens,
+      closes: h.closes,
+    })),
+    ...(prices.length ? { priceRange: `$${Math.min(...prices)}–$${Math.max(...prices)} per month` } : {}),
   };
 }
 
